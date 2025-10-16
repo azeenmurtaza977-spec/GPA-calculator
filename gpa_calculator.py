@@ -1,36 +1,70 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="GPA & CGPA Calculator", layout="centered")
+# -------------------------------
+# 🎓 Streamlit Page Configuration
+# -------------------------------
+st.set_page_config(page_title="University GPA & CGPA Calculator", layout="wide")
+st.markdown("""
+<style>
+    .main {
+        background-color: #f9f9f9;
+    }
+    h1, h2, h3, h4 {
+        color: #004080;
+    }
+    .stButton>button {
+        background-color: #004080;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 20px;
+    }
+    .stButton>button:hover {
+        background-color: #0066cc;
+        color: white;
+    }
+    .css-1d391kg p {
+        font-size: 16px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
+# -------------------------------
+# 🎓 Title & Description
+# -------------------------------
 st.title("🎓 University GPA & CGPA Calculator")
-st.markdown("Enter your grades or marks for each subject below. The app will calculate your GPA for each semester and overall CGPA automatically.")
+st.markdown("""
+This app helps students calculate their **semester-wise GPA** and **overall CGPA** across four semesters.
+Enter your obtained marks for each subject, and the calculator will automatically compute your performance based on the university's GPA scale.
+""")
 
-# --- Helper function ---
-def calculate_gpa(marks):
-    """
-    Convert marks to GPA based on standard scale.
-    """
-    if marks >= 85:
-        return 4.0
-    elif marks >= 80:
-        return 3.7
-    elif marks >= 75:
-        return 3.3
-    elif marks >= 70:
-        return 3.0
-    elif marks >= 65:
-        return 2.7
-    elif marks >= 60:
-        return 2.3
-    elif marks >= 55:
-        return 2.0
-    elif marks >= 50:
-        return 1.7
-    else:
-        return 0.0
+# -------------------------------
+# 📘 GPA Scale Function
+# -------------------------------
+def marks_to_gpa(marks):
+    if marks >= 85: return 4.0
+    elif marks >= 80: return 3.7
+    elif marks >= 75: return 3.3
+    elif marks >= 70: return 3.0
+    elif marks >= 65: return 2.7
+    elif marks >= 60: return 2.3
+    elif marks >= 55: return 2.0
+    elif marks >= 50: return 1.7
+    else: return 0.0
 
-# --- Semester Subjects ---
+def gpa_to_grade(gpa):
+    if gpa == 4.0: return "A+"
+    elif gpa >= 3.7: return "A"
+    elif gpa >= 3.3: return "B+"
+    elif gpa >= 3.0: return "B"
+    elif gpa >= 2.7: return "C+"
+    elif gpa >= 2.3: return "C"
+    elif gpa >= 2.0: return "D"
+    else: return "F"
+
+# -------------------------------
+# 📚 Subjects by Semester
+# -------------------------------
 semesters = {
     "1st Semester": [
         "Application of Information and Communication Technologies",
@@ -66,32 +100,70 @@ semesters = {
     ]
 }
 
-# --- GPA Calculation UI ---
-semester_gpas = []
-st.header("📘 Enter Marks / Grades for Each Semester")
+# -------------------------------
+# 📊 GPA Calculation UI
+# -------------------------------
+st.header("📋 Semester-wise Marks Entry")
+
+semester_results = {}
+all_sem_gpas = []
 
 for sem, subjects in semesters.items():
-    st.subheader(sem)
-    marks_list = []
-    for subj in subjects:
-        marks = st.number_input(f"{subj} Marks (0–100):", min_value=0, max_value=100, step=1, key=subj)
-        marks_list.append(marks)
-    
-    gpa_list = [calculate_gpa(m) for m in marks_list]
-    sem_gpa = round(sum(gpa_list) / len(gpa_list), 2)
-    semester_gpas.append(sem_gpa)
-    st.success(f"{sem} GPA: **{sem_gpa}**")
+    with st.expander(f"📘 {sem}", expanded=False):
+        st.write("Enter marks for each subject (0–100).")
+        marks_data = []
+        total_gpa = 0
 
-# --- Overall CGPA ---
+        for subj in subjects:
+            marks = st.number_input(f"{subj}", 0, 100, step=1, key=f"{sem}-{subj}")
+            gpa = marks_to_gpa(marks)
+            total_gpa += gpa
+            marks_data.append([subj, marks, gpa, gpa_to_grade(gpa)])
+        
+        sem_gpa = round(total_gpa / len(subjects), 2)
+        semester_results[sem] = {"subjects": marks_data, "gpa": sem_gpa}
+        all_sem_gpas.append(sem_gpa)
+        st.success(f"{sem} GPA: **{sem_gpa}**")
+
+# -------------------------------
+# 🎯 Overall CGPA
+# -------------------------------
+st.markdown("---")
 if st.button("Calculate Overall CGPA"):
-    overall_cgpa = round(sum(semester_gpas) / len(semester_gpas), 2)
+    cgpa = round(sum(all_sem_gpas) / len(all_sem_gpas), 2)
     st.balloons()
-    st.markdown(f"### 🎯 Your Overall CGPA is: **{overall_cgpa}**")
+    st.markdown(f"## 🏆 Your Overall CGPA: **{cgpa}**")
+    st.markdown(f"### Grade: **{gpa_to_grade(cgpa)}**")
 
-# --- Display Summary Table ---
-if st.checkbox("Show Semester Summary"):
-    df = pd.DataFrame({
-        "Semester": list(semesters.keys()),
-        "GPA": semester_gpas
+    # Summary Table
+    summary_df = pd.DataFrame({
+        "Semester": list(semester_results.keys()),
+        "Semester GPA": all_sem_gpas
     })
-    st.table(df)
+    st.subheader("📄 Semester Summary")
+    st.dataframe(summary_df, use_container_width=True)
+
+# -------------------------------
+# 📑 Optional: Download Results
+# -------------------------------
+if st.checkbox("📥 Download Detailed Report"):
+    report_rows = []
+    for sem, details in semester_results.items():
+        for subj, marks, gpa, grade in details["subjects"]:
+            report_rows.append([sem, subj, marks, gpa, grade])
+    report_df = pd.DataFrame(report_rows, columns=["Semester", "Subject", "Marks", "GPA", "Grade"])
+    
+    csv = report_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download GPA Report (CSV)", csv, "GPA_Report.csv", "text/csv")
+
+# -------------------------------
+# ℹ️ Notes Section
+# -------------------------------
+st.markdown("""
+---
+### 📘 Notes:
+- GPA is calculated using a **standard 4.0 scale** used by most universities.
+- Marks thresholds follow the **HEC Pakistan recommended scheme**.
+- CGPA = average of all semester GPAs.
+- This tool is designed for educational institutions to provide accurate GPA analytics.
+""")
