@@ -43,10 +43,10 @@ st.markdown("""
 # --------------------------------
 # 🎓 Title
 # --------------------------------
-st.title("🎓 Weighted CGPA & GPA Calculator")
+st.title("🎓 CGPA & GPA Calculator")
 st.markdown("""
-Easily calculate your **GPA (per semester)** or your **Overall Weighted CGPA**.  
-Choose your preferred calculation method from the sidebar.
+This is a student friendly GPA calculator based on proper HEC education and
+ grading system.
 """)
 
 # --------------------------------
