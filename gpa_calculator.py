@@ -1,131 +1,121 @@
 import streamlit as st
 import pandas as pd
 
-# -------------------------------
-# 🎓 Page Setup
-# -------------------------------
-st.set_page_config(page_title="University GPA & CGPA Calculator", layout="wide")
+# --------------------------------
+# 🌐 Page Configuration & Styling
+# --------------------------------
+st.set_page_config(page_title="🎓 Advanced CGPA Calculator", layout="wide")
 
-st.title("🎓 University GPA & CGPA Calculator (8-Semester System)")
+# Add custom CSS for background and styling
 st.markdown("""
-This calculator allows students to compute their **Semester-wise GPA** and **Overall CGPA** for up to **8 semesters**.  
-Simply enter your name, completed semesters, and marks or grades for each course.
+    <style>
+        body {
+            background-color: #e3f2fd;
+        }
+        .main {
+            background-color: #bbdefb;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.1);
+        }
+        .stButton>button {
+            background-color: #1976d2;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: bold;
+        }
+        .stButton>button:hover {
+            background-color: #1565c0;
+            color: white;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# --------------------------------
+# 🎓 Title and Intro
+# --------------------------------
+st.title("🎓 University CGPA Calculator (Weighted Mean System)")
+st.markdown("""
+This calculator computes your **Overall CGPA** using **weighted GPA averaging**.  
+Simply enter your **semester GPAs** and **credit hours** — the system will handle the rest.
 """)
 
-# -------------------------------
-# 🧮 GPA Conversion Function
-# -------------------------------
-def marks_to_gpa(marks):
-    if marks >= 85: return 4.0
-    elif marks >= 80: return 3.7
-    elif marks >= 75: return 3.3
-    elif marks >= 70: return 3.0
-    elif marks >= 65: return 2.7
-    elif marks >= 60: return 2.3
-    elif marks >= 55: return 2.0
-    elif marks >= 50: return 1.7
-    else: return 0.0
-
-def gpa_to_grade(gpa):
-    if gpa >= 4.0: return "A+"
-    elif gpa >= 3.7: return "A"
-    elif gpa >= 3.3: return "B+"
-    elif gpa >= 3.0: return "B"
-    elif gpa >= 2.7: return "C+"
-    elif gpa >= 2.3: return "C"
-    elif gpa >= 2.0: return "D"
-    else: return "F"
-
-# -------------------------------
-# 🧑‍🎓 Student Info
-# -------------------------------
+# --------------------------------
+# 🧑‍🎓 Student Information
+# --------------------------------
 st.sidebar.header("🎓 Student Information")
 student_name = st.sidebar.text_input("Student Name:")
 completed_semesters = st.sidebar.number_input("Number of semesters completed:", 1, 8, 1)
 
 st.markdown("---")
+
 if not student_name:
     st.warning("Please enter your name in the sidebar to begin.")
     st.stop()
 
-st.header(f"📘 GPA Calculation for {student_name}")
+st.header(f"📘 CGPA Calculation for {student_name}")
 
-# -------------------------------
-# 📊 Semester GPA Entry
-# -------------------------------
-semester_gpas = []
-all_semester_data = {}
+# --------------------------------
+# 📊 GPA and Credit Hour Inputs
+# --------------------------------
+semester_data = []
 
 for sem in range(1, completed_semesters + 1):
     with st.expander(f"Semester {sem}", expanded=(sem == 1)):
-        num_courses = st.number_input(
-            f"Number of courses registered in Semester {sem}:",
-            min_value=1,
-            max_value=10,
-            step=1,
-            key=f"num_courses_sem{sem}"
-        )
+        gpa = st.number_input(f"Semester {sem} GPA:", 0.0, 4.0, step=0.01, key=f"gpa_sem{sem}")
+        credit_hours = st.number_input(f"Total Credit Hours in Semester {sem}:", 1, 25, step=1, key=f"ch_sem{sem}")
+        semester_data.append({"Semester": f"Semester {sem}", "GPA": gpa, "CreditHours": credit_hours})
 
-        course_marks = []
-        total_gpa = 0
-
-        for i in range(1, num_courses + 1):
-            marks = st.number_input(f"Course {i} Marks (0–100):", 0, 100, step=1, key=f"sem{sem}_course{i}")
-            gpa = marks_to_gpa(marks)
-            total_gpa += gpa
-            course_marks.append((f"Course {i}", marks, gpa, gpa_to_grade(gpa)))
-
-        semester_gpa = round(total_gpa / num_courses, 2)
-        semester_gpas.append(semester_gpa)
-        all_semester_data[f"Semester {sem}"] = {
-            "courses": course_marks,
-            "semester_gpa": semester_gpa
-        }
-        st.success(f"**Semester {sem} GPA:** {semester_gpa}")
-
-# -------------------------------
-# 🎯 CGPA Calculation
-# -------------------------------
+# --------------------------------
+# 🎯 Weighted CGPA Calculation
+# --------------------------------
 if st.button("Calculate Overall CGPA"):
-    overall_cgpa = round(sum(semester_gpas) / len(semester_gpas), 2)
+    df = pd.DataFrame(semester_data)
+    total_weighted = (df["GPA"] * df["CreditHours"]).sum()
+    total_credits = df["CreditHours"].sum()
+    weighted_cgpa = round(total_weighted / total_credits, 2)
+
     st.balloons()
-    st.markdown(f"## 🏆 {student_name}'s Overall CGPA: **{overall_cgpa}**")
-    st.markdown(f"### 🎯 Final Grade: **{gpa_to_grade(overall_cgpa)}**")
+    st.markdown(f"## 🏆 {student_name}'s Overall CGPA: **{weighted_cgpa}**")
+
+    # Grade Conversion
+    def gpa_to_grade(gpa):
+        if gpa >= 4.0: return "A+"
+        elif gpa >= 3.7: return "A"
+        elif gpa >= 3.3: return "B+"
+        elif gpa >= 3.0: return "B"
+        elif gpa >= 2.7: return "C+"
+        elif gpa >= 2.3: return "C"
+        elif gpa >= 2.0: return "D"
+        else: return "F"
+
+    final_grade = gpa_to_grade(weighted_cgpa)
+    st.markdown(f"### 🎯 Final Grade: **{final_grade}**")
 
     # Summary Table
-    summary_df = pd.DataFrame({
-        "Semester": [f"Semester {i+1}" for i in range(len(semester_gpas))],
-        "Semester GPA": semester_gpas
-    })
     st.subheader("📄 Semester Summary")
-    st.dataframe(summary_df, use_container_width=True)
+    st.dataframe(df.style.highlight_max(subset=["GPA"], color="#90caf9"), use_container_width=True)
 
-# -------------------------------
-# 📥 Optional: Download GPA Report
-# -------------------------------
-if st.checkbox("📥 Download Detailed Report"):
-    all_rows = []
-    for sem, info in all_semester_data.items():
-        for course, marks, gpa, grade in info["courses"]:
-            all_rows.append([sem, course, marks, gpa, grade])
-    report_df = pd.DataFrame(all_rows, columns=["Semester", "Course", "Marks", "GPA", "Grade"])
-    csv = report_df.to_csv(index=False).encode("utf-8")
+    # Download Option
+    csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        label="Download GPA Report (CSV)",
+        label="📥 Download CGPA Report (CSV)",
         data=csv,
-        file_name=f"{student_name}_GPA_Report.csv",
+        file_name=f"{student_name}_CGPA_Report.csv",
         mime="text/csv"
     )
 
-# -------------------------------
-# 📝 Notes Section
-# -------------------------------
+# --------------------------------
+# 📝 Notes
+# --------------------------------
 st.markdown("""
 ---
 ### 📘 Notes:
-- GPA is based on the **standard 4.0 scale** used by most universities.
-- You can calculate your CGPA after **completing 1 or more semesters**.
-- The system automatically averages semester GPAs to compute CGPA.
-- Marks thresholds follow **HEC Pakistan** and **international GPA standards**.
+- CGPA is calculated using the **Weighted Mean Formula**:  
+  \[
+  \text{CGPA} = \frac{\sum (GPA_i \times CreditHours_i)}{\sum CreditHours_i}
+  \]
+- This method ensures semesters with more credit hours have **greater impact**.
+- GPA scale used: **4.0 system** (HEC & International Standard).
 """)
-
